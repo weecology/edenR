@@ -12,11 +12,14 @@ get_metadata <- function() {
     rvest::read_html() %>%
     rvest::html_table()
   metadata <- as.data.frame(metadata[[1]]) %>%
-    dplyr::filter(Dataset != "depths") %>% #Drop directory name from first row
+    dplyr::filter(Dataset != "depths") %>% # Drop directory name from first row
     dplyr::rename(dataset = Dataset, size = Size, last_modified = `Last Modified`) %>%
-    dplyr::mutate(last_modified = as.POSIXct(last_modified,
-                             format = "%Y-%m-%dT%H:%M:%S"),
-                  year = as.integer(substr(dataset, start = 1, stop = 4)))
+    dplyr::mutate(
+      last_modified = as.POSIXct(last_modified,
+        format = "%Y-%m-%dT%H:%M:%S"
+      ),
+      year = as.integer(substr(dataset, start = 1, stop = 4))
+    )
 }
 
 #' @name get_data_urls
@@ -54,11 +57,14 @@ get_last_download <- function(eden_path = file.path("Water"),
                               metadata, force_update = FALSE) {
   if ("last_download.csv" %in% list.files(eden_path) & !force_update) {
     last_download <- read.csv(file.path(eden_path, "last_download.csv")) %>%
-                       dplyr::mutate(last_modified = as.POSIXct(last_modified))
+      dplyr::mutate(last_modified = as.POSIXct(last_modified))
   } else {
-    last_download <- data.frame(dataset = metadata$dataset, size = "0 Mbytes",
-                       last_modified = as.POSIXct("1900-01-01 00:00:01",
-                                         format = "%Y-%m-%d %H:%M:%S"))
+    last_download <- data.frame(
+      dataset = metadata$dataset, size = "0 Mbytes",
+      last_modified = as.POSIXct("1900-01-01 00:00:01",
+        format = "%Y-%m-%d %H:%M:%S"
+      )
+    )
   }
   return(last_download)
 }
@@ -76,8 +82,7 @@ get_last_download <- function(eden_path = file.path("Water"),
 #' @export
 #'
 get_files_to_update <- function(eden_path = file.path("Water"),
-                                metadata, force_update = FALSE){
-
+                                metadata, force_update = FALSE) {
   # Find files that have been updated since last download
   last_download <- get_last_download(eden_path, metadata, force_update = force_update)
   new <- metadata %>%
@@ -87,9 +92,9 @@ get_files_to_update <- function(eden_path = file.path("Water"),
   unlink(file.path(eden_path, new$dataset))
   unchanged_files <- list.files("Water", pattern = "*_depth.nc")
   metadata %>%
-    dplyr::filter(year %in% c(new$year-2, new$year-1, new$year, new$year+1, new$year+2)) %>%
+    dplyr::filter(year %in% c(new$year - 2, new$year - 1, new$year, new$year + 1, new$year + 2)) %>%
     dplyr::filter(!(dataset %in% unchanged_files))
-  }
+}
 
 #' @name update_last_download
 #'
@@ -101,9 +106,9 @@ get_files_to_update <- function(eden_path = file.path("Water"),
 #' @export
 #'
 update_last_download <- function(eden_path = file.path("Water"),
-                                 metadata){
+                                 metadata) {
   current_files <- list.files(eden_path, pattern = "*_depth.nc")
-  write.csv(metadata, file.path(eden_path, 'last_download.csv'))
+  write.csv(metadata, file.path(eden_path, "last_download.csv"))
 }
 
 #' @name download_eden_depths
@@ -121,20 +126,22 @@ update_last_download <- function(eden_path = file.path("Water"),
 #'
 download_eden_depths <- function(eden_path = file.path("Water"),
                                  force_update = FALSE) {
-
   if (!dir.exists(eden_path)) {
     dir.create(eden_path, recursive = TRUE)
   }
 
   metadata <- get_metadata()
   to_update <- get_files_to_update(eden_path, metadata,
-                                   force_update = force_update)
+    force_update = force_update
+  )
   data_urls <- get_data_urls(to_update$dataset)
   options(timeout = 500)
 
-  downloaded <- mapply(download.file,
+  downloaded <- mapply(
+    download.file,
     data_urls$urls,
-    file.path(eden_path, data_urls$file_names))
+    file.path(eden_path, data_urls$file_names)
+  )
 
   return(file.path(eden_path, data_urls$file_names))
 }
