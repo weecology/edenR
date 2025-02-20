@@ -108,7 +108,8 @@ get_files_to_update <- function(eden_path = file.path("Water"),
 update_last_download <- function(eden_path = file.path("Water"),
                                  metadata) {
   current_files <- list.files(eden_path, pattern = "*_depth.nc")
-  write.csv(metadata, file.path(eden_path, "last_download.csv"))
+  current_file_metadata <- filter(metadata, dataset %in% current_files)
+  write.csv(current_file_metadata, file.path(eden_path, "last_download.csv"))
 }
 
 #' @name download_eden_depths
@@ -153,6 +154,7 @@ download_eden_depths <- function(eden_path = file.path("Water"),
         file.remove(file.path(eden_path, data_urls$file_names[i]))
       }
     )
+    update_last_download(eden_path, metadata)
   }
 
   return(file.path(eden_path, data_urls$file_names))
