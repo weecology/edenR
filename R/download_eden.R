@@ -81,8 +81,7 @@ get_last_download <- function(eden_path = file.path("Water"),
 #'
 #' @export
 #'
-get_files_to_update <- function(eden_path = file.path("Water"),
-                                metadata, force_update = FALSE) {
+get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
   # Find files that have been updated since last download
   last_download <- get_last_download(eden_path, metadata, force_update = force_update)
   new <- metadata %>%
@@ -90,7 +89,7 @@ get_files_to_update <- function(eden_path = file.path("Water"),
     dplyr::filter(last_modified > last_modified.last | size != size.last | is.na(last_modified.last))
 
   unlink(file.path(eden_path, new$dataset))
-  unchanged_files <- list.files("Water", pattern = "*_depth.nc")
+  unchanged_files <- list.files(eden_path, pattern = "*_depth.nc")
   metadata %>%
     dplyr::filter(year %in% c(new$year - 2, new$year - 1, new$year, new$year + 1, new$year + 2)) %>%
     dplyr::filter(!(dataset %in% unchanged_files))
