@@ -137,11 +137,23 @@ download_eden_depths <- function(eden_path = file.path("Water"),
   data_urls <- get_data_urls(to_update$dataset)
   options(timeout = 500)
 
-  downloaded <- mapply(
-    download.file,
-    data_urls$urls,
-    file.path(eden_path, data_urls$file_names)
-  )
+  downloaded <- vector("list", length(data_urls$urls))
+  for (i in seq_along(data_urls$urls)) {
+    tryCatch(
+      {
+        download.file(
+          data_urls$urls[i],
+          file.path(eden_path, data_urls$file_names[i])
+        )
+        downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
+      },
+      error = function(e) {
+        message(glue::glue("Failed to download {data_urls$urls[i]}, {e$message}"))
+        downloaded[[i]] <- NA
+        file.remove(file.path(eden_path, data_urls$file_names[i]))
+      }
+    )
+  }
 
   return(file.path(eden_path, data_urls$file_names))
 }
