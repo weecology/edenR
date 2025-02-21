@@ -7,19 +7,19 @@
 #'
 
 get_metadata <- function() {
-    url <- "https://sflthredds.er.usgs.gov/thredds/catalog/eden/depths/catalog.html"
-    metadata <- url |>
-        rvest::read_html() |>
-        rvest::html_table()
-    metadata <- as.data.frame(metadata[[1]]) |>
-        dplyr::filter(Dataset != "depths") |> # Drop directory name from first row
-        dplyr::rename(dataset = Dataset, size = Size, last_modified = `Last Modified`) |>
-        dplyr::mutate(
-            last_modified = as.POSIXct(last_modified,
-                format = "%Y-%m-%dT%H:%M:%S"
-            ),
-            year = as.integer(substr(dataset, start = 1, stop = 4))
-        )
+  url <- "https://sflthredds.er.usgs.gov/thredds/catalog/eden/depths/catalog.html"
+  metadata <- url |>
+    rvest::read_html() |>
+    rvest::html_table()
+  metadata <- as.data.frame(metadata[[1]]) |>
+    dplyr::filter(Dataset != "depths") |> # Drop directory name from first row
+    dplyr::rename(dataset = Dataset, size = Size, last_modified = `Last Modified`) |>
+    dplyr::mutate(
+      last_modified = as.POSIXct(last_modified,
+        format = "%Y-%m-%dT%H:%M:%S"
+      ),
+      year = as.integer(substr(dataset, start = 1, stop = 4))
+    )
 }
 
 #' @name get_data_urls
@@ -34,9 +34,9 @@ get_metadata <- function() {
 #'
 
 get_data_urls <- function(file_names) {
-    base_url <- "https://sflthredds.er.usgs.gov/thredds/fileServer/eden/depths"
-    urls <- file.path(base_url, file_names)
-    return(list(file_names = file_names, urls = urls))
+  base_url <- "https://sflthredds.er.usgs.gov/thredds/fileServer/eden/depths"
+  urls <- file.path(base_url, file_names)
+  return(list(file_names = file_names, urls = urls))
 }
 
 #' @name get_last_download
@@ -55,18 +55,18 @@ get_data_urls <- function(file_names) {
 #'
 get_last_download <- function(eden_path = file.path("Water"),
                               metadata, force_update = FALSE) {
-    if ("last_download.csv" %in% list.files(eden_path) & !force_update) {
-        last_download <- read.csv(file.path(eden_path, "last_download.csv")) |>
-            dplyr::mutate(last_modified = as.POSIXct(last_modified))
-    } else {
-        last_download <- data.frame(
-            dataset = metadata$dataset, size = "0 Mbytes",
-            last_modified = as.POSIXct("1900-01-01 00:00:01",
-                format = "%Y-%m-%d %H:%M:%S"
-            )
-        )
-    }
-    return(last_download)
+  if ("last_download.csv" %in% list.files(eden_path) & !force_update) {
+    last_download <- read.csv(file.path(eden_path, "last_download.csv")) |>
+      dplyr::mutate(last_modified = as.POSIXct(last_modified))
+  } else {
+    last_download <- data.frame(
+      dataset = metadata$dataset, size = "0 Mbytes",
+      last_modified = as.POSIXct("1900-01-01 00:00:01",
+        format = "%Y-%m-%d %H:%M:%S"
+      )
+    )
+  }
+  return(last_download)
 }
 
 #' @name get_files_to_update
@@ -82,17 +82,17 @@ get_last_download <- function(eden_path = file.path("Water"),
 #' @export
 #'
 get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
-    # Find files that have been updated since last download
-    last_download <- get_last_download(eden_path, metadata, force_update = force_update)
-    new <- metadata |>
-        dplyr::left_join(last_download, by = "dataset", suffix = c("", ".last")) |>
-        dplyr::filter(last_modified > last_modified.last | size != size.last | is.na(last_modified.last))
+  # Find files that have been updated since last download
+  last_download <- get_last_download(eden_path, metadata, force_update = force_update)
+  new <- metadata |>
+    dplyr::left_join(last_download, by = "dataset", suffix = c("", ".last")) |>
+    dplyr::filter(last_modified > last_modified.last | size != size.last | is.na(last_modified.last))
 
-    unlink(file.path(eden_path, new$dataset))
-    unchanged_files <- list.files(eden_path, pattern = "*_depth.nc")
-    metadata |>
-        dplyr::filter(year %in% c(new$year - 2, new$year - 1, new$year, new$year + 1, new$year + 2)) |>
-        dplyr::filter(!(dataset %in% unchanged_files))
+  unlink(file.path(eden_path, new$dataset))
+  unchanged_files <- list.files(eden_path, pattern = "*_depth.nc")
+  metadata |>
+    dplyr::filter(year %in% c(new$year - 2, new$year - 1, new$year, new$year + 1, new$year + 2)) |>
+    dplyr::filter(!(dataset %in% unchanged_files))
 }
 
 #' @name update_last_download
@@ -106,9 +106,9 @@ get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
 #'
 update_last_download <- function(eden_path = file.path("Water"),
                                  metadata) {
-    current_files <- list.files(eden_path, pattern = "*_depth.nc")
-    current_file_metadata <- filter(metadata, dataset %in% current_files)
-    write.csv(current_file_metadata, file.path(eden_path, "last_download.csv"))
+  current_files <- list.files(eden_path, pattern = "*_depth.nc")
+  current_file_metadata <- filter(metadata, dataset %in% current_files)
+  write.csv(current_file_metadata, file.path(eden_path, "last_download.csv"))
 }
 
 #' @name download_eden_depths
@@ -126,35 +126,35 @@ update_last_download <- function(eden_path = file.path("Water"),
 #'
 download_eden_depths <- function(eden_path = file.path("Water"),
                                  force_update = FALSE) {
-    if (!dir.exists(eden_path)) {
-        dir.create(eden_path, recursive = TRUE)
-    }
+  if (!dir.exists(eden_path)) {
+    dir.create(eden_path, recursive = TRUE)
+  }
 
-    metadata <- get_metadata()
-    to_update <- get_files_to_update(eden_path, metadata,
-        force_update = force_update
-    )
-    data_urls <- get_data_urls(to_update$dataset)
-    options(timeout = 500)
+  metadata <- get_metadata()
+  to_update <- get_files_to_update(eden_path, metadata,
+    force_update = force_update
+  )
+  data_urls <- get_data_urls(to_update$dataset)
+  options(timeout = 500)
 
-    downloaded <- vector("list", length(data_urls$urls))
-    for (i in seq_along(data_urls$urls)) {
-        tryCatch(
-            {
-                download.file(
-                    data_urls$urls[i],
-                    file.path(eden_path, data_urls$file_names[i])
-                )
-                downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
-            },
-            error = function(e) {
-                message(glue::glue("Failed to download {data_urls$urls[i]}, {e$message}"))
-                downloaded[[i]] <- NA
-                file.remove(file.path(eden_path, data_urls$file_names[i]))
-            }
+  downloaded <- vector("list", length(data_urls$urls))
+  for (i in seq_along(data_urls$urls)) {
+    tryCatch(
+      {
+        download.file(
+          data_urls$urls[i],
+          file.path(eden_path, data_urls$file_names[i])
         )
-        update_last_download(eden_path, metadata)
-    }
+        downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
+      },
+      error = function(e) {
+        message(glue::glue("Failed to download {data_urls$urls[i]}, {e$message}"))
+        downloaded[[i]] <- NA
+        file.remove(file.path(eden_path, data_urls$file_names[i]))
+      }
+    )
+    update_last_download(eden_path, metadata)
+  }
 
-    return(file.path(eden_path, data_urls$file_names))
+  return(file.path(eden_path, data_urls$file_names))
 }
