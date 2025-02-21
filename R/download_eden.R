@@ -114,8 +114,7 @@ get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
 #'
 #' @export
 #'
-update_last_download <- function(eden_path = file.path("Water"),
-                                 metadata) {
+update_last_download <- function(eden_path, metadata) {
   current_files <- list.files(eden_path, pattern = "*_depth.nc")
   current_file_metadata <- filter(metadata, dataset %in% current_files)
   write.csv(current_file_metadata, file.path(eden_path, "last_download.csv"))
@@ -149,24 +148,33 @@ download_eden_depths <- function(eden_path = file.path("Water"),
 
   downloaded <- vector("list", length(data_urls$urls))
   for (i in seq_along(data_urls$urls)) {
-    tryCatch(
-      {
-        download.file(
-          data_urls$urls[i],
-          file.path(eden_path, data_urls$file_names[i])
-        )
-        downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
-      },
-      error = function(e) {
-        message(
-          glue::glue("Failed to download {data_urls$urls[i]}, {e$message}")
-        )
-        downloaded[[i]] <- NA
-        file.remove(file.path(eden_path, data_urls$file_names[i]))
-      }
-    )
-    update_last_download(eden_path, metadata)
+    success <- FALSE
+    attempts <- 0
+    while (!success && attempts < 3) {
+      tryCatch(
+        {
+          download.file(
+            data_urls$urls[i],
+            file.path(eden_path, data_urls$file_names[i])
+          )
+          downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
+          success <- TRUE
+        },
+        error = function(e) {
+          attempts <- attempts + 1
+          file.remove(file.path(eden_path, data_urls$file_names[i]))
+          if (attempts >= 3) {
+            downloaded[[i]] <- NA
+            message(glue::glue("Failed to download {data_urls$urls[i]}"))
+          } else {
+            message(
+              glue::glue("Retrying download of {data_urls$urls[i]}")
+            )
+          }
+        }
+      )
+    }
   }
-
+  update_last_download(eden_path, metadata)
   return(file.path(eden_path, data_urls$file_names))
 }
