@@ -13,7 +13,10 @@ get_metadata <- function() {
     rvest::html_table()
   metadata <- as.data.frame(metadata[[1]]) |>
     dplyr::filter(Dataset != "depths") |> # Drop directory name from first row
-    dplyr::rename(dataset = Dataset, size = Size, last_modified = `Last Modified`) |>
+    dplyr::rename(
+      dataset = Dataset, size = Size,
+      last_modified = `Last Modified`
+    ) |>
     dplyr::mutate(
       last_modified = as.POSIXct(last_modified,
         format = "%Y-%m-%dT%H:%M:%S"
@@ -83,10 +86,18 @@ get_last_download <- function(eden_path = file.path("Water"),
 #'
 get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
   # Find files that have been updated since last download
-  last_download <- get_last_download(eden_path, metadata, force_update = force_update)
+  last_download <- get_last_download(
+    eden_path,
+    metadata,
+    force_update = force_update
+  )
   new <- metadata |>
     dplyr::left_join(last_download, by = "dataset", suffix = c("", ".last")) |>
-    dplyr::filter(last_modified > last_modified.last | size != size.last | is.na(last_modified.last))
+    dplyr::filter(
+      last_modified > last_modified.last |
+        size != size.last |
+        is.na(last_modified.last)
+    )
 
   unlink(file.path(eden_path, new$dataset))
   unchanged_files <- list.files(eden_path, pattern = "*_depth.nc")
@@ -148,7 +159,9 @@ download_eden_depths <- function(eden_path = file.path("Water"),
         downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
       },
       error = function(e) {
-        message(glue::glue("Failed to download {data_urls$urls[i]}, {e$message}"))
+        message(
+          glue::glue("Failed to download {data_urls$urls[i]}, {e$message}")
+        )
         downloaded[[i]] <- NA
         file.remove(file.path(eden_path, data_urls$file_names[i]))
       }
