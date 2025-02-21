@@ -102,7 +102,6 @@ get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
   unlink(file.path(eden_path, new$dataset))
   unchanged_files <- list.files(eden_path, pattern = "*_depth.nc")
   metadata |>
-    dplyr::filter(year %in% c(new$year - 2, new$year - 1, new$year, new$year + 1, new$year + 2)) |>
     dplyr::filter(!(dataset %in% unchanged_files))
 }
 
