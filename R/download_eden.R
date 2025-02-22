@@ -116,7 +116,7 @@ get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
 #'
 update_last_download <- function(eden_path, metadata) {
   current_files <- list.files(eden_path, pattern = "*_depth.nc")
-  current_file_metadata <- filter(metadata, dataset %in% current_files)
+  current_file_metadata <- dplyr::filter(metadata, dataset %in% current_files)
   write.csv(current_file_metadata, file.path(eden_path, "last_download.csv"))
 }
 
