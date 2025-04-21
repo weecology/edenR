@@ -2,10 +2,32 @@ Package: edenR
 Title: Access data from the Everglades Depth Estimation Network (EDEN)
 Version: 0.0.0.9000
 Authors@R:
-    person("Ethan", "White", , "ethan@weecology.org", role = c("aut"))
-    person("Glenda", "Yenni", , "glenda@weecology.org", role = c("aut", "cre"))
+    c(person(given = c("Ethan", "P."),
+             family = "White",
+             role = c("aut", "cre"),
+             email = "ethan@weecology.org",
+             comment = c(ORCID = "0000-0001-6728-7745")),
+      person(given = c("Glenda", "M."),
+             family = "Yenni",
+             role = c("aut"),
+             email = "glenda@weecology.org",
+             comment = c(ORCID = "0000-0001-6969-1848")))
 Description: Access data from the Everglades Depth Estimation Network (EDEN)
 License: MIT + file LICENSE
+Imports:
+    dplyr,
+    glue,
+    httr,
+    lubridate,
+    magrittr,
+    rlang,
+    rvest,
+    sf,
+    stars,
+    stringr,
+    terra,
+    tidyr,
+    units
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
