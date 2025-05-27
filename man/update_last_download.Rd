@@ -4,7 +4,7 @@
 \alias{update_last_download}
 \title{Write new metadata file for files already downloaded}
 \usage{
-update_last_download(eden_path = file.path("Water"), metadata)
+update_last_download(eden_path, metadata)
 }
 \arguments{
 \item{eden_path}{path where the EDEN data should be stored}
