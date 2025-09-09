@@ -57,7 +57,8 @@ get_data_urls <- function(file_names) {
 #' @export
 #'
 get_last_download <- function(eden_path = file.path("Water"),
-                              metadata, force_update = FALSE) {
+                              metadata = get_metadata(),
+                              force_update = FALSE) {
   if ("last_download.csv" %in% list.files(eden_path) & !force_update) {
     last_download <- read.csv(file.path(eden_path, "last_download.csv")) |>
       dplyr::mutate(last_modified = as.POSIXct(last_modified))
