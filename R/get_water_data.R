@@ -2,22 +2,24 @@
 #'
 #' @title Downloads new EDEN depth data, calculates covariates, appends to covariate file
 #'
+#' @param eden_path path where the EDEN data should be stored
+#'
 #' @export
 #'
 
-get_eden_data <- function() {
-  
+get_eden_data <- function(eden_path = file.path("Water")) {
+
 metadata <- get_metadata()
-last_download <- get_last_download() %>% dplyr::select(-X)
+last_download <- get_last_download(eden_path) %>% dplyr::select(-X)
 
 if(identical(metadata,last_download)) {
   return(NULL)
 } else {
 
 download_eden_depths()
-  
+
 covariate_data <- read.table("Water/eden_covariates.csv", header = TRUE, sep = ",")
-new_covariates <- get_eden_covariates() %>%
+new_covariates <- get_eden_covariates(eden_path) %>%
                   dplyr::bind_rows(get_eden_covariates(level="all")) %>%
                   dplyr::bind_rows(get_eden_covariates(level="wcas")) %>%
                   dplyr::select(year, region=Name, variable, value) %>%
@@ -32,7 +34,7 @@ covariate_data <- dplyr::filter(covariate_data, !year %in% new_covariates$year) 
 
 depth_data <- read.table("Water/eden_depth.csv", header = TRUE, sep = ",") %>%
               dplyr::mutate(date=as.Date(date))
-new_depths <- get_eden_depths() %>%
+new_depths <- get_eden_depths(eden_path) %>%
               dplyr::bind_rows(get_eden_depths(level="all")) %>%
               dplyr::bind_rows(get_eden_depths(level="wcas")) %>%
               dplyr::mutate(date=as.Date(date))
@@ -41,7 +43,7 @@ depth_data <- dplyr::filter(depth_data, !date %in% new_depths$date) %>%
               rbind(new_depths) %>%
               dplyr::arrange("date", "region")
 
-update_last_download(metadata = metadata)
+update_last_download(eden_path = eden_path, metadata = metadata)
 }
 
 return(list(covariate_data=covariate_data, depth_data=depth_data))
@@ -51,14 +53,16 @@ return(list(covariate_data=covariate_data, depth_data=depth_data))
 #'
 #' @title Writes new water data
 #'
+#' @param eden_path path where the EDEN data should be stored
+#'
 #' @export
 #'
 
-update_water <- function() {
+update_water <- function(eden_path) {
 
-  data <- get_eden_data()
-  
-  if(is.null(data)) { 
+  data <- get_eden_data(eden_path)
+
+  if(is.null(data)) {
     return(cat("...No new data..."))
     } else {
 
