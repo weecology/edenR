@@ -1,6 +1,6 @@
 context("checks new water data")
 
-depth <- read.csv(file = "../Water/eden_depth.csv",header=T) %>%
+depth <- read.csv(file = "../Water/eden_depth.csv",header=T) |>
   dplyr::mutate(date = lubridate::ymd(date))
 depth_names <- colnames(depth)
 covariates <- read.csv(file = "../Water/eden_covariates.csv",header=T)
@@ -17,7 +17,7 @@ test_that("required column names in new water df", {
 })
 
 test_that("Subregions valid", {
-  
+
   expect_true(all(depth$region %in% c(colonies$subregion,"all","wcas","enp")))
   expect_true(all(covariates$region %in% c(colonies$subregion,"all","wcas","enp")))
 })

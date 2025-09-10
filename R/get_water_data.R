@@ -10,7 +10,7 @@
 get_eden_data <- function(eden_path = file.path("Water")) {
 
 metadata <- get_metadata()
-last_download <- get_last_download(eden_path) %>% dplyr::select(-X)
+last_download <- get_last_download(eden_path) |> dplyr::select(-X)
 
 if(identical(metadata,last_download)) {
   return(NULL)
@@ -19,28 +19,28 @@ if(identical(metadata,last_download)) {
 download_eden_depths()
 
 covariate_data <- read.table("Water/eden_covariates.csv", header = TRUE, sep = ",")
-new_covariates <- get_eden_covariates(eden_path) %>%
-                  dplyr::bind_rows(get_eden_covariates(level="all")) %>%
-                  dplyr::bind_rows(get_eden_covariates(level="wcas")) %>%
-                  dplyr::select(year, region=Name, variable, value) %>%
-                  as.data.frame() %>%
-                  dplyr::select(-geometry) %>%
-                  tidyr::pivot_wider(names_from="variable", values_from="value") %>%
-                  dplyr::mutate(year = as.integer(year)) %>%
+new_covariates <- get_eden_covariates(eden_path) |>
+                  dplyr::bind_rows(get_eden_covariates(level="all")) |>
+                  dplyr::bind_rows(get_eden_covariates(level="wcas")) |>
+                  dplyr::select(year, region=Name, variable, value) |>
+                  as.data.frame() |>
+                  dplyr::select(-geometry) |>
+                  tidyr::pivot_wider(names_from="variable", values_from="value") |>
+                  dplyr::mutate(year = as.integer(year)) |>
                   dplyr::arrange("year", "region")
-covariate_data <- dplyr::filter(covariate_data, !year %in% new_covariates$year) %>%
-                  rbind(new_covariates) %>%
+covariate_data <- dplyr::filter(covariate_data, !year %in% new_covariates$year) |>
+                  rbind(new_covariates) |>
                   dplyr::arrange("year", "region")
 
-depth_data <- read.table("Water/eden_depth.csv", header = TRUE, sep = ",") %>%
+depth_data <- read.table("Water/eden_depth.csv", header = TRUE, sep = ",") |>
               dplyr::mutate(date=as.Date(date))
-new_depths <- get_eden_depths(eden_path) %>%
-              dplyr::bind_rows(get_eden_depths(level="all")) %>%
-              dplyr::bind_rows(get_eden_depths(level="wcas")) %>%
+new_depths <- get_eden_depths(eden_path) |>
+              dplyr::bind_rows(get_eden_depths(level="all")) |>
+              dplyr::bind_rows(get_eden_depths(level="wcas")) |>
               dplyr::mutate(date=as.Date(date))
 
-depth_data <- dplyr::filter(depth_data, !date %in% new_depths$date) %>%
-              rbind(new_depths) %>%
+depth_data <- dplyr::filter(depth_data, !date %in% new_depths$date) |>
+              rbind(new_depths) |>
               dplyr::arrange("date", "region")
 
 update_last_download(eden_path = eden_path, metadata = metadata)
@@ -58,7 +58,7 @@ return(list(covariate_data=covariate_data, depth_data=depth_data))
 #' @export
 #'
 
-update_water <- function(eden_path) {
+update_water <- function(eden_path = file.path("Water")) {
 
   data <- get_eden_data(eden_path)
 
