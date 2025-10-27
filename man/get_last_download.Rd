@@ -5,8 +5,8 @@
 \title{Get list of EDEN depths data already downloaded}
 \usage{
 get_last_download(
-  eden_path = file.path("Water"),
-  metadata,
+  eden_path = file.path("~/water"),
+  metadata = get_metadata(),
   force_update = FALSE
 )
 }

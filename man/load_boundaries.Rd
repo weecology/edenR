@@ -5,7 +5,8 @@
 \title{Calculate dry days from everwader}
 \usage{
 load_boundaries(
-  path = file.path("SiteandMethods/regions"),
+  path =
+    "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/",
   level = "subregions"
 )
 }

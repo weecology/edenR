@@ -56,7 +56,7 @@ get_data_urls <- function(file_names) {
 #'
 #' @export
 #'
-get_last_download <- function(eden_path = file.path("Water"),
+get_last_download <- function(eden_path = file.path("~/water"),
                               metadata = get_metadata(),
                               force_update = FALSE) {
   if ("last_download.csv" %in% list.files(eden_path) & !force_update) {
@@ -134,7 +134,7 @@ update_last_download <- function(eden_path, metadata) {
 #'
 #' @export
 #'
-download_eden_depths <- function(eden_path = file.path("Water"),
+download_eden_depths <- function(eden_path = file.path("~/water"),
                                  force_update = FALSE) {
   if (!dir.exists(eden_path)) {
     dir.create(eden_path, recursive = TRUE)

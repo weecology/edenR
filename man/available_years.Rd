@@ -4,10 +4,13 @@
 \alias{available_years}
 \title{Get list of years available for covariate calculation}
 \usage{
-available_years(eden_path = file.path("Water"))
+available_years(eden_path = file.path("~/water"), new = FALSE)
 }
 \arguments{
 \item{eden_path}{path where the EDEN data should be stored}
+
+\item{new}{logical, should \code{available_years} only list years which have changed
+since last download}
 }
 \value{
 vector of years

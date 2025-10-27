@@ -4,7 +4,10 @@
 \alias{update_water}
 \title{Writes new water data}
 \usage{
-update_water()
+update_water(eden_path)
+}
+\arguments{
+\item{eden_path}{path where the EDEN data should be stored}
 }
 \description{
 Writes new water data
