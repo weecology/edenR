@@ -4,7 +4,10 @@
 \alias{get_eden_data}
 \title{Downloads new EDEN depth data, calculates covariates, appends to covariate file}
 \usage{
-get_eden_data()
+get_eden_data(eden_path = file.path("~/water"))
+}
+\arguments{
+\item{eden_path}{path where the EDEN data should be stored}
 }
 \description{
 Downloads new EDEN depth data, calculates covariates, appends to covariate file

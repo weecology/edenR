@@ -9,10 +9,12 @@
 #'
 #' @export
 #'
-load_boundaries <- function(path = file.path("SiteandMethods/regions"),
+load_boundaries <- function(path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/",
                             level = "subregions") {
+  
   level <- tolower(level)
-  boundaries <- sf::st_read(file.path(path,paste(level,".shp",sep = "")))
+  boundaries <- sf::st_read(paste0(path,level,".geojson"))
+  
   return(boundaries)
 }
 
@@ -103,10 +105,10 @@ extract_region_means <- function(raster, regions) {
       dplyr::mutate(variable = var_name, value = NA)
   } else {
   region_means_spdf <- regions %>%
-    dplyr::mutate(variable = var_name, value = as.numeric(region_means$value)) %>%
-    dplyr::mutate_if(is.numeric, list(~dplyr::na_if(., Inf))) %>%
-    dplyr::mutate_if(is.numeric, list(~dplyr::na_if(., -Inf))) %>%
-    dplyr::mutate_if(is.numeric, list(~dplyr::na_if(., NaN))) 
+    dplyr::mutate(variable = var_name, value = as.double(region_means$value)) %>%
+    dplyr::mutate_if(is.double, list(~dplyr::na_if(., Inf))) %>%
+    dplyr::mutate_if(is.double, list(~dplyr::na_if(., -Inf))) %>%
+    dplyr::mutate_if(is.double, list(~dplyr::na_if(., NaN))) 
   }
   return(region_means_spdf)
 }
@@ -116,15 +118,22 @@ extract_region_means <- function(raster, regions) {
 #' @title Get list of years available for covariate calculation
 #'
 #' @param eden_path path where the EDEN data should be stored
+#' @param new logical, should `available_years` only list years which have changed 
+#' since last download
 #'
 #' @return vector of years
 #'
 #' @export
 #'
 
-available_years <- function(eden_path = file.path("Water")) {
+available_years <- function(eden_path = file.path("~/water"), new = FALSE) {
   eden_data_files <- list.files(file.path(eden_path), pattern = '_depth.nc')
-
+  years <- eden_data_files %>%
+    stringr::str_split('_', simplify = TRUE) %>%
+    .[, 1] %>%
+    unique()
+  
+  if(new) {
   # Find which years need to be updated since last download
   metadata <- get_metadata()
   last_download <- get_last_download(eden_path, metadata)
@@ -135,7 +144,8 @@ available_years <- function(eden_path = file.path("Water")) {
     stringr::str_split('_', simplify = TRUE) %>%
     .[, 1] %>%
     unique() %>%
-    .[. %in% c(new$year, new$year+1, new$year+2)]
+    .[. %in% c(new$year, new$year+1, new$year+2)] }
+  
   return(years)
 }
 
@@ -156,9 +166,9 @@ available_years <- function(eden_path = file.path("Water")) {
 #' @export
 #'
 get_eden_covariates <- function(level = "subregions",
-                                eden_path = file.path("Water"),
+                                eden_path = file.path("~/water"),
                                 years = available_years(eden_path),
-                                boundaries_path = file.path("SiteandMethods/regions"))
+                                boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/")
   {
 
   eden_data_files <- list.files(file.path(eden_path), pattern = '_depth.nc')
@@ -252,7 +262,7 @@ get_eden_covariates <- function(level = "subregions",
 get_eden_depths <- function(level="subregions",
                             eden_path = file.path("Water"),
                             years = available_years(eden_path),
-                            boundaries_path = file.path("SiteandMethods/regions"))
+                            boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/")
   {
 
   eden_data_files <- list.files(eden_path, pattern = '_depth.nc', full.names = TRUE)

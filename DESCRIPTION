@@ -1,6 +1,6 @@
 Package: edenR
 Title: Access data from the Everglades Depth Estimation Network (EDEN)
-Version: 0.0.0.9000
+Version: 0.0.1
 Authors@R:
     c(person(given = c("Ethan", "P."),
              family = "White",
@@ -15,6 +15,7 @@ Authors@R:
 Description: Access data from the Everglades Depth Estimation Network (EDEN)
 License: MIT + file LICENSE
 Imports:
+    cubelyr,
     dplyr,
     glue,
     httr,
@@ -30,4 +31,4 @@ Imports:
     units
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3

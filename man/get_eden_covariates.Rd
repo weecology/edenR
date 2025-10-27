@@ -6,9 +6,10 @@
 \usage{
 get_eden_covariates(
   level = "subregions",
-  eden_path = file.path("Water"),
+  eden_path = file.path("~/water"),
   years = available_years(eden_path),
-  boundaries_path = file.path("SiteandMethods/regions")
+  boundaries_path =
+    "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/"
 )
 }
 \arguments{
