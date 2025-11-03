@@ -20,8 +20,21 @@ download_eden_depths(eden_path, force_update = FALSE)
   
 years = available_years(eden_path, new = TRUE)
 
-if (!("eden_covariates" %in% list.files(eden_path))) {
+if ("eden_covariates" %in% list.files(eden_path)) {
   covariate_data <- read.table(file.path(eden_path,"eden_covariates.csv"), header = TRUE, sep = ",")
+} else {
+  covariate_data <- data.frame(
+    year = numeric(),
+    region = character(),
+    init_depth = numeric(),
+    breed_season_depth = numeric(),
+    recession = numeric(),
+    pre_recession = numeric(),
+    post_recession = numeric(),
+    dry_days = numeric(),
+    reversals = numeric())
+}
+  
 new_covariates <- get_eden_covariates(eden_path = eden_path, 
                                       years=years) %>%
                   dplyr::bind_rows(get_eden_covariates(eden_path = eden_path,
@@ -40,8 +53,19 @@ covariate_data <- dplyr::filter(covariate_data, !year %in% new_covariates$year) 
                   rbind(new_covariates) %>%
                   dplyr::arrange("year", "region")
 
-depth_data <- read.table(file.path(eden_path,"eden_depth.csv"), header = TRUE, sep = ",") %>%
-              dplyr::mutate(date=as.Date(date))
+if ("eden_depth.csv" %in% list.files(eden_path)) {
+  depth_data <- read.table(file.path(eden_path,"eden_depth.csv"), header = TRUE, sep = ",") %>%
+                dplyr::mutate(date=as.Date(date))  
+} else {
+  depth_data <- data.frame(
+    date = as.Date(character()),
+    depth = numeric(),
+    depth_mean = numeric(),
+    depth_sd = numeric(),
+    depth_max = numeric(),
+    depth_min = numeric())
+}
+
 new_depths <- get_eden_depths(eden_path = eden_path, 
                               years=years) %>%
               dplyr::bind_rows(get_eden_depths(eden_path = eden_path,
