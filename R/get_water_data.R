@@ -49,7 +49,7 @@ new_covariates <- get_eden_covariates(eden_path = eden_path,
                   tidyr::pivot_wider(names_from="variable", values_from="value") %>%
                   dplyr::mutate(year = as.integer(year)) %>%
                   dplyr::arrange("year", "region")
-covariate_data <- dplyr::filter(covariate_data, !year %in% new_covariates$year) %>%
+covariate_data <- dplyr::filter(covariate_data, !(year %in% new_covariates$year)) %>%
                   rbind(new_covariates) %>%
                   dplyr::arrange("year", "region")
 
