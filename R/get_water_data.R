@@ -10,7 +10,7 @@
 get_eden_data <- function(eden_path = file.path("~/water")) {
 
 metadata <- get_metadata()
-last_download <- get_last_download(eden_path) %>% dplyr::select(-X)
+last_download <- get_last_download(eden_path)
 
 if(identical(metadata,last_download)) {
   return(NULL)
@@ -20,7 +20,8 @@ download_eden_depths(eden_path, force_update = FALSE)
   
 years = available_years(eden_path, new = TRUE)
 
-covariate_data <- read.table(file.path(eden_path,"eden_covariates.csv"), header = TRUE, sep = ",")
+if (!("eden_covariates" %in% list.files(eden_path))) {
+  covariate_data <- read.table(file.path(eden_path,"eden_covariates.csv"), header = TRUE, sep = ",")
 new_covariates <- get_eden_covariates(eden_path = eden_path, 
                                       years=years) %>%
                   dplyr::bind_rows(get_eden_covariates(eden_path = eden_path,
