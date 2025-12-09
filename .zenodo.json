@@ -1,0 +1,31 @@
+{
+"title": "Retrieve, process and summarize Everglades Depth Estimation Network (EDEN) water depth data",
+"creators": [
+    {
+      "affiliation": "University of Florida",
+      "name": "Glenda M. Yenni",
+      "orcid": "0000-0001-6969-1848"
+    },
+    {
+      "affiliation": "University of Florida",
+      "name": "S. K. Morgan Ernest",
+      "orcid": "0000-0002-6026-8530"
+    }
+    {
+      "affiliation": "University of Florida",
+      "name": "Ethan P. White",
+      "orcid": "0000-0001-6728-7745"
+    },
+],
+    "description": "The edenR package provides functions to retrieve, process and summarize the EDEN water depth data. The data begin in 1991 and are continuously updated.",
+    "keywords": [
+    "ecology",
+    "time-series",
+    "long-term",
+    "everglades",
+    "birds"
+  ],
+    "access_right": "open",
+    "license": "mit-license",
+    "upload_type": "software"
+}
