@@ -49,10 +49,10 @@ calc_recession <- function(depth_data) {
   times <- stars::st_get_dimension_values(depth_data, 'time')
   start_depth <- depth_data |>
     dplyr::filter(time == min(times)) |>
-    stars::st_set_dimensions("time", values = NULL)
+    abind::adrop()
   end_depth <- depth_data |>
     dplyr::filter(time == max(times)) |>
-    stars::st_set_dimensions("time", values = NULL)
+    abind::adrop()
   recession <- start_depth - end_depth
   days <- as.integer(max(times) - min(times))
   recession_rate <- recession / days
