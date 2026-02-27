@@ -49,10 +49,10 @@ calc_recession <- function(depth_data) {
   times <- stars::st_get_dimension_values(depth_data, 'time')
   start_depth <- depth_data |>
     dplyr::filter(time == min(times)) |>
-    stars::st_set_dimensions("time", values = NULL)
+    abind::adrop()
   end_depth <- depth_data |>
     dplyr::filter(time == max(times)) |>
-    stars::st_set_dimensions("time", values = NULL)
+    abind::adrop()
   recession <- start_depth - end_depth
   days <- as.integer(max(times) - min(times))
   recession_rate <- recession / days
@@ -149,6 +149,20 @@ available_years <- function(eden_path = file.path("~/water"), new = FALSE) {
   return(years)
 }
 
+# Read time values from a NetCDF file and returns them as POSIXct.
+# stars::read_stars is currently losing the CF-convention offset/delta
+# when combining multiple files with different offsets,
+# so extract and convert times directly via ncdf4
+get_nc_times <- function(nc_file) {
+  nc <- ncdf4::nc_open(nc_file)
+  time_vals <- ncdf4::ncvar_get(nc, "time")
+  time_units <- ncdf4::ncatt_get(nc, "time", "units")$value
+  ncdf4::nc_close(nc)
+  epoch <- as.POSIXct(sub("days since ", "", time_units),
+                      format = "%Y-%m-%dT%H:%M:%S %z", tz = "UTC")
+  epoch + as.difftime(time_vals, units = "days")
+}
+
 #' @name get_eden_covariates
 #'
 #' @title Generate annual scale water covariates using EDEN data
@@ -185,7 +199,9 @@ get_eden_covariates <- function(level = "subregions",
     nc_files <- c(list.files(eden_path, pattern3, full.names = TRUE),
                   list.files(eden_path, pattern2, full.names = TRUE),
                   list.files(eden_path, pattern, full.names = TRUE))
+    time_values <- do.call(c, lapply(nc_files, get_nc_times))
     year_data <- stars::read_stars(nc_files, along = "time") %>%
+      stars::st_set_dimensions("time", values = time_values) %>%
       setNames(., "depth") %>%
       dplyr::mutate(depth = dplyr::case_when(depth < units::set_units(0, cm) ~ units::set_units(0, cm),
                                              depth >= units::set_units(0, cm) ~ depth,
@@ -275,7 +291,9 @@ get_eden_depths <- function(level="subregions",
     print(paste("Processing ", year, "...", sep = ""))
     pattern <- file.path(paste(year, "_.*_depth.nc", sep = ''))
     nc_files <- list.files(eden_path, pattern, full.names = TRUE)
+    time_values <- do.call(c, lapply(nc_files, get_nc_times))
     year_data <- stars::read_stars(nc_files, along = "time") %>%
+      stars::st_set_dimensions("time", values = time_values) %>%
       setNames(., "depth") %>%
       dplyr::mutate(depth = dplyr::case_when(depth < units::set_units(0, cm) ~ units::set_units(0, cm),
                                              depth >= units::set_units(0, cm) ~ depth,
