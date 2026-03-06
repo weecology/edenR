@@ -1,6 +1,26 @@
 # Calculate standard water depth covariates from EDEN data following WADEM model
 
-#' @name load_boundaries
+
+#' @name default_colony_buffers
+#'
+#' @title Return default colony buffers in m for each species
+#'
+#' @return named list of colony buffers in m for each species
+#'
+#' @export
+#'
+default_colony_buffers <- function() {
+  return(list(
+    "gbhe" = 10000,
+    "greg" = 10000,
+    "rosp" = 10000,
+    "sneg" = 10000,
+    "whib" = 10000,
+    "wost" = 10000
+  ))
+}
+
+#' @name get_boundaries
 #'
 #' @title Calculate dry days from everwader
 #'
@@ -9,12 +29,29 @@
 #'
 #' @export
 #'
-load_boundaries <- function(path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/",
-                            level = "subregions") {
-  
+get_boundaries <- function(
+  path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/",
+  level = "subregions",
+  colony_buffers = default_colony_buffers()
+) {
   level <- tolower(level)
-  boundaries <- sf::st_read(paste0(path,level,".geojson"))
-  
+  if (level == "colonies") {
+    boundaries_raw <- sf::st_read(paste0(path, "colonies/colonies.geojson"))
+    original_crs <- sf::st_crs(boundaries_raw)
+    boundaries_utm <- sf::st_transform(boundaries_raw, "EPSG:32617")
+    boundaries <- do.call(rbind, lapply(
+      names(colony_buffers),
+      function(species) {
+        boundaries_utm |>
+          sf::st_buffer(colony_buffers[[species]]) |>
+          sf::st_transform(original_crs) |>
+          dplyr::mutate(species = species)
+      }
+    ))
+
+  } else {
+    boundaries <- sf::st_read(paste0(path, "regions/", level, ".geojson"))
+  }
   return(boundaries)
 }
 
@@ -98,17 +135,23 @@ calc_reversals <- function(depth_data) {
 #'
 extract_region_means <- function(raster, regions) {
   var_name <- names(raster)
-  region_means <- terra::aggregate(raster, regions, mean, na.rm=TRUE) %>%
-    setNames(., "value")
-  if(all(is.nan(region_means$value))) {
+  # Use terra:extract to independently calculate mean for the overlapping
+  # polygons that occur when working with colonies
+  region_means <- terra::extract(
+    terra::rast(raster),
+    terra::vect(regions),
+    fun = mean,
+    na.rm = TRUE
+  )
+  if (all(is.nan(region_means[[2]]))) {
     region_means_spdf <- regions %>%
       dplyr::mutate(variable = var_name, value = NA)
   } else {
-  region_means_spdf <- regions %>%
-    dplyr::mutate(variable = var_name, value = as.double(region_means$value)) %>%
-    dplyr::mutate_if(is.double, list(~dplyr::na_if(., Inf))) %>%
-    dplyr::mutate_if(is.double, list(~dplyr::na_if(., -Inf))) %>%
-    dplyr::mutate_if(is.double, list(~dplyr::na_if(., NaN))) 
+    region_means_spdf <- regions %>%
+      dplyr::mutate(variable = var_name, value = as.double(region_means[[2]])) %>%
+      dplyr::mutate_if(is.double, list(~ dplyr::na_if(., Inf))) %>%
+      dplyr::mutate_if(is.double, list(~ dplyr::na_if(., -Inf))) %>%
+      dplyr::mutate_if(is.double, list(~ dplyr::na_if(., NaN)))
   }
   return(region_means_spdf)
 }
@@ -118,7 +161,7 @@ extract_region_means <- function(raster, regions) {
 #' @title Get list of years available for covariate calculation
 #'
 #' @param eden_path path where the EDEN data should be stored
-#' @param new logical, should `available_years` only list years which have changed 
+#' @param new logical, should `available_years` only list years which have changed
 #' since last download
 #'
 #' @return vector of years
@@ -127,25 +170,26 @@ extract_region_means <- function(raster, regions) {
 #'
 
 available_years <- function(eden_path = file.path("~/water"), new = FALSE) {
-  eden_data_files <- list.files(file.path(eden_path), pattern = '_depth.nc')
+  eden_data_files <- list.files(file.path(eden_path), pattern = "_depth.nc")
   years <- eden_data_files %>%
-    stringr::str_split('_', simplify = TRUE) %>%
+    stringr::str_split("_", simplify = TRUE) %>%
     .[, 1] %>%
     unique()
-  
-  if(new) {
-  # Find which years need to be updated since last download
-  metadata <- get_metadata()
-  last_download <- get_last_download(eden_path, metadata)
-  new <- metadata %>%
-    dplyr::left_join(last_download, by = "dataset", suffix = c("", ".last")) %>%
-    dplyr::filter(last_modified > last_modified.last | size != size.last | is.na(last_modified.last))
-  years <- eden_data_files %>%
-    stringr::str_split('_', simplify = TRUE) %>%
-    .[, 1] %>%
-    unique() %>%
-    .[. %in% c(new$year, new$year+1, new$year+2)] }
-  
+
+  if (new) {
+    # Find which years need to be updated since last download
+    metadata <- get_metadata()
+    last_download <- get_last_download(eden_path, metadata)
+    new <- metadata %>%
+      dplyr::left_join(last_download, by = "dataset", suffix = c("", ".last")) %>%
+      dplyr::filter(last_modified > last_modified.last | size != size.last | is.na(last_modified.last))
+    years <- eden_data_files %>%
+      stringr::str_split("_", simplify = TRUE) %>%
+      .[, 1] %>%
+      unique() %>%
+      .[. %in% c(new$year, new$year + 1, new$year + 2)]
+  }
+
   return(years)
 }
 
@@ -167,26 +211,31 @@ get_nc_times <- function(nc_file) {
 #'
 #' @title Generate annual scale water covariates using EDEN data
 #'
-#' @param level region level to load (all, wcas, or subregions)
+#' @param level region level to load (all, wcas, or subregions, colonies)
 #' @param eden_path path where the EDEN data should be stored
 #' @param years numeric vector of years to generate covariates for,
 #' defaults to all available years
 #' @param boundaries_path name of a shape file holding the boundaries
 #' within which to calculate covariates
+#' @param colony_buffers named list with species specific buffers used
+#' to calculated covariates when level = 'colonies'
 #'
 #' @return data.frame covariate data including columns for region, year,
-#' covariate, value, and the geometry of the region
+#' species (if level = 'colonies), covariate, value, and the geometry of
+#' the region
 #'
 #' @export
 #'
-get_eden_covariates <- function(level = "subregions",
-                                eden_path = file.path("~/water"),
-                                years = available_years(eden_path),
-                                boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/")
-  {
+get_eden_covariates <- function(
+  level = "subregions",
+  eden_path = file.path("~/water"),
+  years = available_years(eden_path),
+  boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/",
+  colony_buffers = default_colony_buffers()
+) {
 
   eden_data_files <- list.files(file.path(eden_path), pattern = '_depth.nc')
-  boundaries <- load_boundaries(boundaries_path,level)
+  boundaries <- get_boundaries(boundaries_path, level, colony_buffers)
   examp_eden_file <- stars::read_stars(file.path(eden_path, eden_data_files[1]))
   boundaries_utm <- sf::st_transform(boundaries, sf::st_crs(examp_eden_file))
 
@@ -206,12 +255,11 @@ get_eden_covariates <- function(level = "subregions",
       dplyr::mutate(depth = dplyr::case_when(depth < units::set_units(0, cm) ~ units::set_units(0, cm),
                                              depth >= units::set_units(0, cm) ~ depth,
                                              is.na(depth) ~ units::set_units(NA, cm)))
-
     breed_start <- as.POSIXct(paste0(year, '-01-01'))
     breed_end <- as.POSIXct(paste0(year, '-06-30'))
     breed_season_data <- year_data %>%
       dplyr::filter(time >= breed_start, time <= breed_end)
-    
+
     dry_start <- as.POSIXct(paste0(as.numeric(year)-2, '-03-31'))
     dry_end <- as.POSIXct(paste0(year, '-06-30'))
     dry_season_data <- year_data %>%
@@ -278,11 +326,12 @@ get_eden_covariates <- function(level = "subregions",
 get_eden_depths <- function(level="subregions",
                             eden_path = file.path("Water"),
                             years = available_years(eden_path),
-                            boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/")
+                            boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/",
+                            colony_buffers = default_colony_buffers())
   {
 
   eden_data_files <- list.files(eden_path, pattern = '_depth.nc', full.names = TRUE)
-  boundaries <- load_boundaries(boundaries_path,level)
+  boundaries <- get_boundaries(boundaries_path, level, colony_buffers)
   examp_eden_file <- stars::read_stars(file.path(eden_data_files[1]))
   boundaries_utm <- sf::st_transform(boundaries, sf::st_crs(examp_eden_file))
 
