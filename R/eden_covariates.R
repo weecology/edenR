@@ -48,7 +48,6 @@ get_boundaries <- function(
           dplyr::mutate(species = species)
       }
     ))
-
   } else {
     boundaries <- sf::st_read(paste0(path, "regions/", level, ".geojson"))
   }
@@ -84,11 +83,15 @@ load_boundaries <- function(
 #'
 calc_dry_days <- function(depth_data) {
   dry_days <- depth_data %>%
-    dplyr::mutate(dry_days = dplyr::case_when(depth <= units::set_units(0, cm) ~
-                                                units::set_units(1, d),
-                                              depth > units::set_units(0, cm) ~ units::set_units(0, d),
-                                              is.na(depth) ~ units::set_units(NA, d)),
-                  .keep = "none") %>%
+    dplyr::mutate(
+      dry_days = dplyr::case_when(
+        depth <= units::set_units(0, cm) ~
+          units::set_units(1, d),
+        depth > units::set_units(0, cm) ~ units::set_units(0, d),
+        is.na(depth) ~ units::set_units(NA, d)
+      ),
+      .keep = "none"
+    ) %>%
     stars::st_apply(c(1, 2), sum)
   return(dry_days)
 }
@@ -102,7 +105,7 @@ calc_dry_days <- function(depth_data) {
 #' @export
 #'
 calc_recession <- function(depth_data) {
-  times <- stars::st_get_dimension_values(depth_data, 'time')
+  times <- stars::st_get_dimension_values(depth_data, "time")
   start_depth <- depth_data |>
     dplyr::filter(time == min(times)) |>
     abind::adrop()
@@ -125,17 +128,21 @@ calc_recession <- function(depth_data) {
 #'
 calc_reversals <- function(depth_data) {
   end_date_position <- stars::st_dimensions(depth_data)$time$to
-  depth_t <- depth_data[,,,2:end_date_position] |>
+  depth_t <- depth_data[, , , 2:end_date_position] |>
     stars::st_set_dimensions("time", values = seq(1, end_date_position - 1))
-  depth_t_minus_1 <- depth_data[,,,1:(end_date_position - 1)] |>
+  depth_t_minus_1 <- depth_data[, , , 1:(end_date_position - 1)] |>
     stars::st_set_dimensions("time", values = seq(1, end_date_position - 1))
   depth_deltas <- depth_t - depth_t_minus_1
   reversals <- depth_deltas %>%
-    dplyr::mutate(reversal = dplyr::case_when(depth > units::set_units(0, cm) ~
-                                                units::set_units(1, d),
-                                              depth <= units::set_units(0, cm) ~ units::set_units(0, d),
-                                              is.na(depth) ~ units::set_units(NA, d)),
-                  .keep = "none") %>%
+    dplyr::mutate(
+      reversal = dplyr::case_when(
+        depth > units::set_units(0, cm) ~
+          units::set_units(1, d),
+        depth <= units::set_units(0, cm) ~ units::set_units(0, d),
+        is.na(depth) ~ units::set_units(NA, d)
+      ),
+      .keep = "none"
+    ) %>%
     stars::st_apply(c(1, 2), sum)
   return(reversals)
 }
@@ -222,7 +229,8 @@ get_nc_times <- function(nc_file) {
   time_units <- ncdf4::ncatt_get(nc, "time", "units")$value
   ncdf4::nc_close(nc)
   epoch <- as.POSIXct(sub("days since ", "", time_units),
-                      format = "%Y-%m-%dT%H:%M:%S %z", tz = "UTC")
+    format = "%Y-%m-%dT%H:%M:%S %z", tz = "UTC"
+  )
   epoch + as.difftime(time_vals, units = "days")
 }
 
@@ -252,8 +260,7 @@ get_eden_covariates <- function(
   boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/",
   colony_buffers = default_colony_buffers()
 ) {
-
-  eden_data_files <- list.files(file.path(eden_path), pattern = '_depth.nc')
+  eden_data_files <- list.files(file.path(eden_path), pattern = "_depth.nc")
   boundaries <- get_boundaries(boundaries_path, level, colony_buffers)
   examp_eden_file <- stars::read_stars(file.path(eden_path, eden_data_files[1]))
   boundaries_utm <- sf::st_transform(boundaries, sf::st_crs(examp_eden_file))
@@ -261,33 +268,37 @@ get_eden_covariates <- function(
   covariates <- c()
   for (year in years) {
     print(paste("Processing ", year, "...", sep = ""))
-    pattern <- file.path(paste(year, "_.*_depth.nc", sep = ''))
-    pattern2 <- file.path(paste(as.numeric(year)-1, "_.*_depth.nc", sep = ''))
-    pattern3 <- file.path(paste(as.numeric(year)-2, "_.*_depth.nc", sep = ''))
-    nc_files <- c(list.files(eden_path, pattern3, full.names = TRUE),
-                  list.files(eden_path, pattern2, full.names = TRUE),
-                  list.files(eden_path, pattern, full.names = TRUE))
+    pattern <- file.path(paste(year, "_.*_depth.nc", sep = ""))
+    pattern2 <- file.path(paste(as.numeric(year) - 1, "_.*_depth.nc", sep = ""))
+    pattern3 <- file.path(paste(as.numeric(year) - 2, "_.*_depth.nc", sep = ""))
+    nc_files <- c(
+      list.files(eden_path, pattern3, full.names = TRUE),
+      list.files(eden_path, pattern2, full.names = TRUE),
+      list.files(eden_path, pattern, full.names = TRUE)
+    )
     time_values <- do.call(c, lapply(nc_files, get_nc_times))
     year_data <- stars::read_stars(nc_files, along = "time") %>%
       stars::st_set_dimensions("time", values = time_values) %>%
       setNames(., "depth") %>%
-      dplyr::mutate(depth = dplyr::case_when(depth < units::set_units(0, cm) ~ units::set_units(0, cm),
-                                             depth >= units::set_units(0, cm) ~ depth,
-                                             is.na(depth) ~ units::set_units(NA, cm)))
-    breed_start <- as.POSIXct(paste0(year, '-01-01'))
-    breed_end <- as.POSIXct(paste0(year, '-06-30'))
+      dplyr::mutate(depth = dplyr::case_when(
+        depth < units::set_units(0, cm) ~ units::set_units(0, cm),
+        depth >= units::set_units(0, cm) ~ depth,
+        is.na(depth) ~ units::set_units(NA, cm)
+      ))
+    breed_start <- as.POSIXct(paste0(year, "-01-01"))
+    breed_end <- as.POSIXct(paste0(year, "-06-30"))
     breed_season_data <- year_data %>%
       dplyr::filter(time >= breed_start, time <= breed_end)
 
-    dry_start <- as.POSIXct(paste0(as.numeric(year)-2, '-03-31'))
-    dry_end <- as.POSIXct(paste0(year, '-06-30'))
+    dry_start <- as.POSIXct(paste0(as.numeric(year) - 2, "-03-31"))
+    dry_end <- as.POSIXct(paste0(year, "-06-30"))
     dry_season_data <- year_data %>%
       dplyr::filter(time >= dry_start, time <= dry_end)
 
     # Do a pre-breed/post-breed split to allow pre-breeding recession calculations
     # following Peterson 2017. Peterson does this on a per species basis. To start
     # just pick the mid-point for the different species to split on
-    pre_breed_end <- as.POSIXct(paste0(year, '-03-01'))
+    pre_breed_end <- as.POSIXct(paste0(year, "-03-01"))
     pre_breed_season_data <- year_data %>%
       dplyr::filter(time >= breed_start, time <= pre_breed_end)
     post_breed_season_data <- year_data %>%
@@ -297,7 +308,7 @@ get_eden_covariates <- function(
     breed_season_depth <- breed_season_data %>%
       stars::st_apply(c(1, 2), mean) %>%
       setNames(., "breed_season_depth")
-    init_depth <- breed_season_data[,,,1] %>%
+    init_depth <- breed_season_data[, , , 1] %>%
       setNames(., "init_depth")
 
     # Calculate recession from everwader
@@ -316,8 +327,10 @@ get_eden_covariates <- function(
     reversals <- calc_reversals(breed_season_data) %>%
       setNames(., "reversals")
 
-    predictors <- list(init_depth, breed_season_depth, recession, pre_recession,
-                       post_recession, dry_days, reversals)
+    predictors <- list(
+      init_depth, breed_season_depth, recession, pre_recession,
+      post_recession, dry_days, reversals
+    )
     for (predictor in predictors) {
       year_covariates <- extract_region_means(predictor, boundaries_utm) %>%
         dplyr::mutate(year = year)
@@ -342,14 +355,12 @@ get_eden_covariates <- function(
 #'
 #' @export
 #'
-get_eden_depths <- function(level="subregions",
+get_eden_depths <- function(level = "subregions",
                             eden_path = file.path("Water"),
                             years = available_years(eden_path),
                             boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/",
-                            colony_buffers = default_colony_buffers())
-  {
-
-  eden_data_files <- list.files(eden_path, pattern = '_depth.nc', full.names = TRUE)
+                            colony_buffers = default_colony_buffers()) {
+  eden_data_files <- list.files(eden_path, pattern = "_depth.nc", full.names = TRUE)
   boundaries <- get_boundaries(boundaries_path, level, colony_buffers)
   examp_eden_file <- stars::read_stars(file.path(eden_data_files[1]))
   boundaries_utm <- sf::st_transform(boundaries, sf::st_crs(examp_eden_file))
@@ -357,29 +368,31 @@ get_eden_depths <- function(level="subregions",
   new_data <- c()
   for (year in years) {
     print(paste("Processing ", year, "...", sep = ""))
-    pattern <- file.path(paste(year, "_.*_depth.nc", sep = ''))
+    pattern <- file.path(paste(year, "_.*_depth.nc", sep = ""))
     nc_files <- list.files(eden_path, pattern, full.names = TRUE)
     time_values <- do.call(c, lapply(nc_files, get_nc_times))
     year_data <- stars::read_stars(nc_files, along = "time") %>%
       stars::st_set_dimensions("time", values = time_values) %>%
       setNames(., "depth") %>%
-      dplyr::mutate(depth = dplyr::case_when(depth < units::set_units(0, cm) ~ units::set_units(0, cm),
-                                             depth >= units::set_units(0, cm) ~ depth,
-                                             is.na(depth) ~ units::set_units(NA, cm)))
+      dplyr::mutate(depth = dplyr::case_when(
+        depth < units::set_units(0, cm) ~ units::set_units(0, cm),
+        depth >= units::set_units(0, cm) ~ depth,
+        is.na(depth) ~ units::set_units(NA, cm)
+      ))
 
-    region_means <- terra::aggregate(year_data, boundaries_utm, mean, na.rm=TRUE)
-    region_sd <- terra::aggregate(year_data, boundaries_utm, sd, na.rm=TRUE)
-    region_max <- terra::aggregate(year_data, boundaries_utm, max, na.rm=TRUE)
-    region_min <- terra::aggregate(year_data, boundaries_utm, min, na.rm=TRUE)
+    region_means <- terra::aggregate(year_data, boundaries_utm, mean, na.rm = TRUE)
+    region_sd <- terra::aggregate(year_data, boundaries_utm, sd, na.rm = TRUE)
+    region_max <- terra::aggregate(year_data, boundaries_utm, max, na.rm = TRUE)
+    region_min <- terra::aggregate(year_data, boundaries_utm, min, na.rm = TRUE)
 
-    new_year <- reshape_star(region_means, variable="depth_mean", year=year, boundaries=boundaries_utm) %>%
-                merge(reshape_star(region_sd, variable="depth_sd", year=year, boundaries=boundaries_utm)) %>%
-                merge(reshape_star(region_max, variable="depth_max", year=year, boundaries=boundaries_utm)) %>%
-                merge(reshape_star(region_min, variable="depth_min", year=year, boundaries=boundaries_utm))
+    new_year <- reshape_star(region_means, variable = "depth_mean", year = year, boundaries = boundaries_utm) %>%
+      merge(reshape_star(region_sd, variable = "depth_sd", year = year, boundaries = boundaries_utm)) %>%
+      merge(reshape_star(region_max, variable = "depth_max", year = year, boundaries = boundaries_utm)) %>%
+      merge(reshape_star(region_min, variable = "depth_min", year = year, boundaries = boundaries_utm))
 
     new_data <- rbind(new_data, new_year)
   }
- return(new_data)
+  return(new_data)
 }
 
 #' @name reshape_star
@@ -395,17 +408,17 @@ get_eden_depths <- function(level="subregions",
 #'
 #' @export
 #'
-reshape_star <- function(data, variable="depth", year, boundaries) {
-
- region_spdf <- boundaries %>% dplyr::mutate(value = data$depth)
- new_region <- as.data.frame(region_spdf$value) %>%
-                              dplyr::mutate_all(as.double)
- colnames(new_region) <- as.character(as.Date(stars::st_get_dimension_values(data, 'time')))
- new_data <- new_region %>%
-             dplyr::mutate(region = region_spdf$Name) %>%
-             tidyr::pivot_longer(starts_with(as.character(year)),
-             names_to = "date", values_to = "value") %>%
-             dplyr::select(date, region, value) %>%
-             dplyr::rename(!!variable := value)
- return(new_data)
+reshape_star <- function(data, variable = "depth", year, boundaries) {
+  region_spdf <- boundaries %>% dplyr::mutate(value = data$depth)
+  new_region <- as.data.frame(region_spdf$value) %>%
+    dplyr::mutate_all(as.double)
+  colnames(new_region) <- as.character(as.Date(stars::st_get_dimension_values(data, "time")))
+  new_data <- new_region %>%
+    dplyr::mutate(region = region_spdf$Name) %>%
+    tidyr::pivot_longer(starts_with(as.character(year)),
+      names_to = "date", values_to = "value"
+    ) %>%
+    dplyr::select(date, region, value) %>%
+    dplyr::rename(!!variable := value)
+  return(new_data)
 }
