@@ -9,7 +9,8 @@ get_eden_depths(
   eden_path = file.path("Water"),
   years = available_years(eden_path),
   boundaries_path =
-    "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/"
+    "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/",
+  colony_buffers = default_colony_buffers()
 )
 }
 \arguments{

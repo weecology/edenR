@@ -9,11 +9,12 @@ get_eden_covariates(
   eden_path = file.path("~/water"),
   years = available_years(eden_path),
   boundaries_path =
-    "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/"
+    "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/",
+  colony_buffers = default_colony_buffers()
 )
 }
 \arguments{
-\item{level}{region level to load (all, wcas, or subregions)}
+\item{level}{region level to load (all, wcas, or subregions, colonies)}
 
 \item{eden_path}{path where the EDEN data should be stored}
 
@@ -22,10 +23,14 @@ defaults to all available years}
 
 \item{boundaries_path}{name of a shape file holding the boundaries
 within which to calculate covariates}
+
+\item{colony_buffers}{named list with species specific buffers used
+to calculated covariates when level = 'colonies'}
 }
 \value{
 data.frame covariate data including columns for region, year,
-covariate, value, and the geometry of the region
+species (if level = 'colonies), covariate, value, and the geometry of
+the region
 }
 \description{
 Generate annual scale water covariates using EDEN data
