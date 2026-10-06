@@ -14,6 +14,7 @@ summarize the EDEN water depth data. The data begin in 1991 and are continuously
 
 Authors:
 \itemize{
+  \item Ethan P. White \email{ethan@weecology.org} (\href{https://orcid.org/0000-0001-6728-7745}{ORCID})
   \item Glenda M. Yenni \email{glenda@weecology.org} (\href{https://orcid.org/0000-0001-6969-1848}{ORCID})
 }
 
