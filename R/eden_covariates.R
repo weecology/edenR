@@ -228,9 +228,14 @@ get_nc_times <- function(nc_file) {
   time_vals <- ncdf4::ncvar_get(nc, "time")
   time_units <- ncdf4::ncatt_get(nc, "time", "units")$value
   ncdf4::nc_close(nc)
-  epoch <- as.POSIXct(sub("days since ", "", time_units),
+  # Older EDEN files use a trailing "Z" for UTC instead of "+0000"
+  epoch_string <- sub("Z$", " +0000", sub("days since ", "", time_units))
+  epoch <- as.POSIXct(epoch_string,
     format = "%Y-%m-%dT%H:%M:%S %z", tz = "UTC"
   )
+  if (is.na(epoch)) {
+    stop("Unable to parse time units '", time_units, "' in ", nc_file)
+  }
   epoch + as.difftime(time_vals, units = "days")
 }
 
