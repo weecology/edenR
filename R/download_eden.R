@@ -5,21 +5,20 @@
 #'
 #' @export
 #'
-
 get_metadata <- function() {
   url <- "https://sflthredds.er.usgs.gov/thredds/catalog/eden/depths/catalog.html"
   metadata <- url |>
     rvest::read_html() |>
     rvest::html_table()
   metadata <- as.data.frame(metadata[[1]]) |>
-    dplyr::filter(Dataset != "depths") |> # Drop directory name from first row
+    dplyr::filter(Dataset != "depths") |>
     dplyr::rename(
       dataset = Dataset, size = Size,
       last_modified = `Last Modified`
     ) |>
     dplyr::mutate(
       last_modified = as.POSIXct(last_modified,
-        format = "%Y-%m-%dT%H:%M:%S"
+                                 format = "%Y-%m-%dT%H:%M:%S"
       ),
       year = as.integer(substr(dataset, start = 1, stop = 4))
     )
@@ -35,7 +34,6 @@ get_metadata <- function() {
 #'
 #' @export
 #'
-
 get_data_urls <- function(file_names) {
   base_url <- "https://sflthredds.er.usgs.gov/thredds/fileServer/eden/depths"
   urls <- file.path(base_url, file_names)
@@ -66,7 +64,7 @@ get_last_download <- function(eden_path = file.path("~/water"),
     last_download <- data.frame(
       dataset = metadata$dataset, size = "0 Mbytes",
       last_modified = as.POSIXct("1900-01-01 00:00:01",
-        format = "%Y-%m-%d %H:%M:%S"
+                                 format = "%Y-%m-%d %H:%M:%S"
       )
     )
   }
@@ -86,7 +84,6 @@ get_last_download <- function(eden_path = file.path("~/water"),
 #' @export
 #'
 get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
-  # Find files that have been updated since last download
   last_download <- get_last_download(
     eden_path,
     metadata,
@@ -99,8 +96,6 @@ get_files_to_update <- function(eden_path, metadata, force_update = FALSE) {
         size != size.last |
         is.na(last_modified.last)
     )
-
-  unlink(file.path(eden_path, new$dataset))
   unchanged_files <- list.files(eden_path, pattern = "*_depth.nc")
   metadata |>
     dplyr::filter(!(dataset %in% unchanged_files))
@@ -139,43 +134,64 @@ download_eden_depths <- function(eden_path = file.path("~/water"),
   if (!dir.exists(eden_path)) {
     dir.create(eden_path, recursive = TRUE)
   }
-
   metadata <- get_metadata()
   to_update <- get_files_to_update(eden_path, metadata,
-    force_update = force_update
+                                   force_update = force_update
   )
   data_urls <- get_data_urls(to_update$dataset)
   options(timeout = 500)
-
   downloaded <- vector("list", length(data_urls$urls))
+  
   for (i in seq_along(data_urls$urls)) {
     success <- FALSE
     attempts <- 0
+    
     while (!success && attempts < 3) {
+      attempts <- attempts + 1
       tryCatch(
         {
-          download.file(
+          status <- download.file(
             data_urls$urls[i],
-            file.path(eden_path, data_urls$file_names[i])
+            file.path(eden_path, data_urls$file_names[i]),
+            mode = "wb",
+            method = "libcurl"
           )
-          downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
-          success <- TRUE
+          
+          # Check return status: 0 = success, non-zero = failure
+          if (status == 0) {
+            downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
+            success <- TRUE
+          } else {
+            # Non-zero status means download failed
+            dest_file <- file.path(eden_path, data_urls$file_names[i])
+            if (file.exists(dest_file)) {
+              file.remove(dest_file)
+            }
+            if (attempts >= 3) {
+              downloaded[[i]] <- NA
+              message(glue::glue("Failed to download {data_urls$urls[i]} (status: {status})"))
+            }
+          }
         },
         error = function(e) {
-          attempts <- attempts + 1
-          file.remove(file.path(eden_path, data_urls$file_names[i]))
+          dest_file <- file.path(eden_path, data_urls$file_names[i])
+          if (file.exists(dest_file)) {
+            file.remove(dest_file)
+          }
           if (attempts >= 3) {
             downloaded[[i]] <- NA
-            message(glue::glue("Failed to download {data_urls$urls[i]}"))
-          } else {
-            message(
-              glue::glue("Retrying download of {data_urls$urls[i]}")
-            )
+            message(glue::glue("Failed to download {data_urls$urls[i]}: {e$message}"))
           }
         }
       )
     }
   }
+  
   update_last_download(eden_path, metadata)
-  return(file.path(eden_path, data_urls$file_names))
+  
+  # Return successfully downloaded files (filter out NAs)
+  downloaded_files <- Filter(Negate(is.na), downloaded)
+  return(unlist(downloaded_files))
 }
+
+
