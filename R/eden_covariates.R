@@ -358,7 +358,7 @@ get_eden_covariates <- function(
 get_eden_depths <- function(level = "subregions",
                             eden_path = file.path("Water"),
                             years = available_years(eden_path),
-                            boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/regions/",
+                            boundaries_path = "https://raw.githubusercontent.com/weecology/EvergladesWadingBird/refs/heads/main/SiteandMethods/",
                             colony_buffers = default_colony_buffers()) {
   eden_data_files <- list.files(eden_path, pattern = "_depth.nc", full.names = TRUE)
   boundaries <- get_boundaries(boundaries_path, level, colony_buffers)
