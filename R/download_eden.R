@@ -156,7 +156,8 @@ download_eden_depths <- function(eden_path = file.path("~/water"),
         {
           download.file(
             data_urls$urls[i],
-            file.path(eden_path, data_urls$file_names[i])
+            file.path(eden_path, data_urls$file_names[i]),
+            mode = "wb"
           )
           downloaded[[i]] <- file.path(eden_path, data_urls$file_names[i])
           success <- TRUE
